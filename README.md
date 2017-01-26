@@ -50,11 +50,15 @@ Configure the path to docker-listen in ``/etc/init/docker-listen.conf`` and star
 Using Systemd
 -------------
 
-Copy the file ``systemd/docker-listen.service`` in ``/etc/systemd/system``.
+Copy the file ``systemd/docker-listen.service`` in ``/lib/systemd/system``.
 
-Copy the file ``systemd/docker-listen`` in ``/etc/default``.
+Fix permission ``chmod a+x /lib/systemd/system/docker-listen.service``
 
-Run command ``systemctl enable docker-listen.service``.
+Enable the unit ``systemctl enable docker-listen.service``.
+
+Start it ``systemctl start docker-listen.service``.
+
+and see if it's running correctly ``systemctl status docker-listen.service``.
 
 Configuration
 =============
