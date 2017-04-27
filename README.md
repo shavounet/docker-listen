@@ -28,7 +28,7 @@ Run the following command :
 
     sudo <python> docker-listen.py
 
-[pex](https://github.com/pantsbuild/pex) enables one-line install / run :
+[pex](https://github.com/pantsbuild/pex) enables one-line install / run :
 
     sudo pex dpath docker-py -- docker-listen.py
 
@@ -77,3 +77,8 @@ Example :
     sighup_enabled=yes
     sighup_process_name=dnsmasq
     log_level=WARN
+
+Usage
+=====
+
+Add the label `com.docker-listen.dnsmasq-hostname` on your containers.
