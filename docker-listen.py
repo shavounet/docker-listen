@@ -140,7 +140,7 @@ def handle_start(configuration, client, start_event):
 		inspect = client.inspect_container(start_event['Actor']['Attributes']['container'])
 		need_restart = handle_add_container(configuration, inspect)
 		if need_restart:
-		    sighup_dnsmasq(configuration)
+			sighup_dnsmasq(configuration)
 	except Exception:
 		logging.exception('Unexpected error processing %s', pprint.pformat(start_event))
 
@@ -163,21 +163,31 @@ def handle_stop_container(configuration, container_id):
 		logging.exception('Unexpected error deleting host file for container %s', container_id)
 
 def handle_add_container(configuration, container):
-    logging.debug(pprint.pformat(container))
-    try:
-        labels = dpath.util.get(container, 'Config/Labels')
-        if configuration.docker_label in labels:
-            hostnames = string.split(labels[configuration.docker_label], ',')
-            ip_address = dpath.util.get(container, 'NetworkSettings/IPAddress')
-            with open(os.path.join(configuration.hosts_dir, "docker-" + container['Id']), 'w') as f:
-                for hostname in hostnames:
-                    logging.info('Container %s IP address - %s hostname : %s', container['Id'], ip_address, hostname)
-                    f.write('address=/{0}/{1}\n'.format(hostname, ip_address))
-                return True
-    except KeyError:
-        logging.warn('No IP address on container %s (from %s)', container['Id'], container['Image'])
+	logging.debug(pprint.pformat(container))
+	try:
+		labels = dpath.util.get(container, 'Config/Labels')
+		if configuration.docker_label in labels:
+			hostnames = string.split(labels[configuration.docker_label], ',')
+			all_ip_address = [];
+			global_ip_address = dpath.util.get(container, 'NetworkSettings/IPAddress')
+			if global_ip_address:
+				all_ip_address.append(global_ip_address)
+			networks = dpath.util.get(container, 'NetworkSettings/Networks')
+			for network in networks.values():
+				network_ip_address = network['IPAddress']
+				if network_ip_address:
+					all_ip_address.append(network_ip_address)
+			if all_ip_address:
+				with open(os.path.join(configuration.hosts_dir, "docker-" + container['Id']), 'w') as f:
+					for ip_address in all_ip_address:
+						for hostname in hostnames:
+							logging.info('Container %s IP address - %s hostname : %s', container['Id'], ip_address, hostname)
+							f.write('address=/{0}/{1}\n'.format(hostname, ip_address))
+				return True
+	except KeyError:
+		logging.warn('No IP address on container %s (from %s)', container['Id'], container['Image'])
 
-    return False
+	return False
 
 
 if __name__ == '__main__':
