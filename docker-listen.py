@@ -23,6 +23,8 @@ DEFAULTS = {
 	'sighup_enabled': 'False',
 	'sighup_process_name': 'dnsmasq',
 	'systemctl_enabled': 'True',
+	'docker_enabled': 'False',
+	'docker_container_name': 'docker_listen_dnsmasq',
 	'systemctl_service_name': 'dnsmasq.service',
 	'log_level': 'INFO'
 }
@@ -47,14 +49,21 @@ def main(arguments):
 
 	# fix boolean value
 	if defaults['systemctl_enabled'] in ('True', 'yes', '1'):
-			defaults['systemctl_enabled'] = True
-			defaults['sighup_enabled'] = False
+		defaults['systemctl_enabled'] = True
+		defaults['sighup_enabled'] = False
+		defaults['docker_enabled'] = False
 	elif defaults['sighup_enabled'] in ('True', 'yes', '1'):
 		defaults['systemctl_enabled'] = False
 		defaults['sighup_enabled'] = True
+		defaults['docker_enabled'] = False
+	elif defaults['docker_enabled'] in ('True', 'yes', '1'):
+		defaults['systemctl_enabled'] = False
+		defaults['sighup_enabled'] = False
+		defaults['docker_enabled'] = True
 	else:
 		defaults['systemctl_enabled'] = False
 		defaults['sighup_enabled'] = False
+		defaults['docker_enabled'] = False
 	# clean process name
 	defaults['sighup_process_name'] = defaults['sighup_process_name'].replace('\'', '')
 	defaults['systemctl_service_name'] = defaults['systemctl_service_name'].replace('\'', '')
@@ -68,6 +77,8 @@ def main(arguments):
 	parser.add_argument('--systemctl-service-name', metavar='NAME', nargs='?', help='name of the service to restart')
 	parser.add_argument('--sighup-enabled', nargs='?', type=bool, choices=('yes', 'no'), help='sighup process on events ?')
 	parser.add_argument('--sighup-process-name', metavar='NAME', nargs='?', help='name of the process to sighup (with killall)')
+	parser.add_argument('--docker-enabled', nargs='?', type=bool, choices=('yes', 'no'), help='pass signal through docker ?')
+	parser.add_argument('--docker-container-name', metavar='NAME', nargs='?', help='name of the docker container to sighup (with killall)')
 	parser.add_argument('--hosts-dir', nargs='?', metavar='DIR_PATH', help='directory where hosts files are stored ; all files in this directory will be deleted')
 	parser.add_argument('--log-level', nargs='?', choices=('DEBUG', 'INFO', 'WARN', 'ERROR'))
 	logging.debug('Using defaults %s', pprint.pformat(defaults))
@@ -119,11 +130,14 @@ def clean_all(configuration):
 
 def sighup_dnsmasq(configuration):
 	if configuration.systemctl_enabled:
-		logging.info('Reloading dnsmasq configuration')
+		logging.info('[systemctl] Reloading dnsmasq configuration')
 		os.system('systemctl restart \'%s\'' % (configuration.systemctl_service_name, ))
 	elif configuration.sighup_enabled:
-		logging.info('Reloading dnsmasq configuration')
+		logging.info('[sighup] Reloading dnsmasq configuration')
 		os.system('killall -HUP \'%s\'' % (configuration.sighup_process_name, ))
+	elif configuration.docker_enabled:
+		logging.info('[docker] Reloading dnsmasq configuration')
+		os.system('docker kill -s SIGHUP \'%s\'' % (configuration.docker_container_name, ))
 
 def init_all(configuration, client):
 	try:
